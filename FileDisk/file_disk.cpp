@@ -289,12 +289,12 @@ bool    file_disk::delete_file( const char* inFileName )
     {
         delete [] nodeToDelete.cached_data();
         nodeToDelete.set_cached_data( nullptr );
-        nodeToDelete.set_flags( file_node::is_free );
-        nodeToDelete.set_name("");
-        mFreeBlocks.push_back( nodeToDelete );
-        mFileMap.erase( fileItty );
-        mMapFlags |= map_needs_rewrite;
     }
+    nodeToDelete.set_flags( file_node::is_free );
+    nodeToDelete.set_name("");
+    mFreeBlocks.push_back( nodeToDelete );
+    mFileMap.erase( fileItty );
+    mMapFlags |= map_needs_rewrite;
     
     return true;
 }
