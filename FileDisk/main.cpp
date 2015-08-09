@@ -15,7 +15,9 @@ using namespace std;
 
 int main(int argc, const char * argv[])
 {
-    file_disk   theFile("testfile.boff");
+    file_disk   theFile;
+    if( !theFile.open("testfile.boff") )
+        cout << "Couldn't create a new disk_file of name 'hello_world.txt'." << endl;
     
     const char* theStr = "Hello, World!";
     size_t      dataLen = strlen(theStr);
@@ -25,10 +27,13 @@ int main(int argc, const char * argv[])
     if( !theFile.add_file( "hello_world.txt", blockData, dataLen ) )
         cout << "File of name 'hello_world.txt' already exists on this file_disk." << endl;
     
-    if( !theFile.delete_file( "hello_world.txt" ) )
-        cout << "File of name 'hello_world.txt' doesn't exist on this file_disk." << endl;
+//    if( !theFile.delete_file( "hello_world.txt" ) )
+//        cout << "File of name 'hello_world.txt' doesn't exist on this file_disk." << endl;
     
-    if( !theFile.write() )
-        cout << "Could not save this file_disk." << endl;
+    if( !theFile.compact() )
+        cout << "Could not compact the file_disk." << endl;
+    
+//    if( !theFile.write() )
+//        cout << "Could not save this file_disk." << endl;
     return 0;
 }

@@ -8,30 +8,40 @@
 
 #include "file_disk.h"
 #include <iostream>
+#include <sys/stat.h>
+#include <sstream>
 
 
 using namespace std;
 
 
-file_disk::file_disk( const std::string& inPath )
+file_disk::file_disk()
     : mVersion(0x00000101), mMapOffset(0), mMapFlags(0)
 {
-    mFile.open( inPath.c_str(), ios::binary | ios::in | ios::out );
-    if( !mFile.is_open() )  // File doesn't exist?
-        mFile.open( inPath.c_str(), ios::binary | ios::in | ios::out | ios::trunc );
-    mFile.seekg( 0, ios::end );
-    mFileSize = mFile.tellg();
-    if( mFileSize == 0 )
-        mMapFlags = map_needs_rewrite | offsets_dirty | data_dirty;
     
-    if( !load_map() )
-        cout << "Failed to open file." << endl;
 }
 
 
 file_disk::~file_disk()
 {
     
+}
+
+
+bool    file_disk::open( const std::string& inPath )
+{
+    mFilePath = inPath;
+    mFile.open( mFilePath.c_str(), ios::binary | ios::in | ios::out );
+    if( !mFile.is_open() )  // File doesn't exist?
+        mFile.open( mFilePath.c_str(), ios::binary | ios::in | ios::out | ios::trunc );    // Create it!
+    if( !mFile.is_open() )
+        return false;
+    mFile.seekg( 0, ios::end );
+    mFileSize = mFile.tellg();
+    if( mFileSize == 0 )
+        mMapFlags = map_needs_rewrite | offsets_dirty | data_dirty;
+    
+    return load_map();
 }
 
 
@@ -300,6 +310,105 @@ bool    file_disk::delete_file( const char* inFileName )
 }
 
 
+bool    file_disk::compact()
+{
+    // Generate a unique file name for the temp file in which we'll
+    //  write the compacted version of our file:
+    string      compactedPath(mFilePath);
+    size_t      x = 1;
+    while( true )
+    {
+        stringstream          uniquedPath;
+        uniquedPath << compactedPath << "." << x;
+        if( !ifstream(uniquedPath.str().c_str()).is_open() )  // File doesn't exist yet?
+        {
+            compactedPath = uniquedPath.str();
+            break;
+        }
+        if( x == 0 )    // Number wrapped? Means we couldn't find a file name.
+            return false;   // ABORT! ABORT!
+        x++;
+    }
+    
+    fstream                 compactedFile( compactedPath.c_str(), ios::binary | ios::out | ios::trunc );
+    std::vector<file_node>  compactedBlocks;
+    
+    // Write file header (version & map offset):
+    uint32_t        version = 0x00000101;
+    uint64_t        mapOffset = sizeof(mapOffset) +sizeof(version);
+    uint64_t        mapSize = sizeof(uint64_t);
+    compactedFile.seekp(0, ios::beg);
+    compactedFile.write( (char*)&version, sizeof(version) );
+    compactedFile.write( (char*)&mapOffset, sizeof(mapOffset) );
+    
+    // Now loop over all blocks and write out their data. We create a
+    //  second block map during this with the new offsets in it.
+    //  We also calculate the size the map will need for these blocks
+    //  and advance the mapOffset offset so it will point right after
+    //  the last block's data.
+    for( auto currNodeEntry : mFileMap )
+    {
+        if( strcmp(currNodeEntry.second.name().c_str(),MAP_BLOCK_FILENAME) == 0 )    // Skip the map, we'll add a new one.
+            continue;
+        
+        if( currNodeEntry.second.cached_data() != nullptr )
+        {
+            compactedFile.write( currNodeEntry.second.cached_data(), currNodeEntry.second.logical_size() );
+            delete [] currNodeEntry.second.cached_data();
+            currNodeEntry.second.set_cached_data( nullptr );
+        }
+        else
+        {
+            size_t  numBytes = currNodeEntry.second.logical_size();
+            mFile.seekg( currNodeEntry.second.start_offset(), ios::beg );
+            for( size_t x = 0; x < numBytes; x++ )
+            {
+                char    theCh = 0;
+                mFile.read( &theCh, sizeof(theCh) );
+                compactedFile.write( &theCh, sizeof(theCh) );
+            }
+        }
+        
+        file_node currNode = currNodeEntry.second;
+        currNode.set_start_offset( mapOffset );
+        currNode.set_physical_size( currNode.logical_size() );
+        compactedBlocks.push_back( currNode );
+        mapOffset += currNode.logical_size();
+        mapSize += currNode.node_size_on_disk();
+    }
+    
+    // Now build a node entry representing the area occupied by the map:
+    file_node   mapNode;
+    mapNode.set_name( MAP_BLOCK_FILENAME );
+    mapSize += mapNode.node_size_on_disk(); // Apart from name, all other fields are constant length, so we can determine the size now and immediately assign it to mapNode's fields.
+    mapNode.set_start_offset( mapOffset );
+    mapNode.set_logical_size( mapSize );
+    mapNode.set_physical_size( mapSize );
+    compactedBlocks.push_back( mapNode );
+    
+    // Now write out the map as a count + node entries:
+    uint64_t numBlocks = compactedBlocks.size();
+    compactedFile.write( (char*) &numBlocks, sizeof(numBlocks) );
+    for( const file_node& currNode : compactedBlocks )
+    {
+        currNode.write( compactedFile );
+    }
+    
+    // Now write out the map offset:
+    compactedFile.seekp( sizeof(uint32_t), ios::beg );
+    compactedFile.write( (char*) &mapOffset, sizeof(mapOffset) );
+
+    // Now close the old file and then delete it, then rename the new file
+    //  to the old name:
+    mFile.close();
+    remove( mFilePath.c_str() );
+    compactedFile.close();
+    rename( compactedPath.c_str(), mFilePath.c_str() );
+    
+    return open( mFilePath );
+}
+
+
 bool    file_node::read( std::iostream& inFile )
 {
     uint8_t     nameLen = 0;
@@ -332,4 +441,6 @@ bool    file_node::write( std::iostream& inFile ) const
     
     return true;
 }
+
+
 

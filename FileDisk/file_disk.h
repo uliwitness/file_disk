@@ -76,10 +76,13 @@ public:
     typedef uint32_t   map_flags_t;
     
 
-    file_disk( const std::string& inPath );
+    file_disk();
     ~file_disk();
     
+    bool            open( const std::string& inPath );
     bool            write();    // Commit all changes to this file to disk.
+    bool            compact();
+
 
     // blockSize is the size of the actual block you want, e.g. if you want to reserve some room for growth
     //  in the block, but only have a bit of data to fill right now. If blockSize == 0, the block will be
@@ -100,6 +103,7 @@ protected:
     map_flags_t                     mMapFlags;  // Whenever we set dirty flags, we also set them here, so that we know on save whether we need to write a new map, update it etc (Not written to disk).
     std::vector<file_node>          mFreeBlocks;// List of unused blocks in the file that we can re-use.
     std::fstream                    mFile;      // The actual binary file on disk where data is kept/persisted.
+    std::string                     mFilePath;  // The path corresponding to mFile.
     uint32_t                        mVersion;   // Only low 2 bytes used for major/minor file format version. Other 2 bytes used to detect endian-ness (If high byte is not 0, you're reading an (currently unsupported) non-native endian file).
     uint64_t                        mMapOffset; // Position of the block that contains the block map.
 };
