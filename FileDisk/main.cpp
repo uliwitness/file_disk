@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include "file_disk.h"
+#include <iomanip>
 
 
 using namespace std;
@@ -16,14 +17,14 @@ using namespace fld;
 
 void    print_statistics( const struct stats& statistics )
 {
-    cout << "No. of files in file_disk: " << statistics.num_files << endl;
-    cout << "Used data:                 " << statistics.used_bytes << " bytes" << endl;
-    cout << "Wasted data:               " << statistics.free_bytes << " bytes" << endl;
-    cout << "Map size:                  " << statistics.map_bytes << " bytes" << endl;
-    cout << "Header:                    " << statistics.header_bytes << " bytes" << endl;
-    cout << "Names in map:              " << statistics.name_bytes << " bytes" << endl;
+    cout << "No. of files in file_disk: " << internal << setw(5) << statistics.num_files << endl;
+    cout << "Used data:                 " << internal << setw(5) << statistics.used_bytes << " bytes" << endl;
+    cout << "Wasted data:               " << internal << setw(5) << statistics.free_bytes << " bytes" << endl;
+    cout << "Map size:                  " << internal << setw(5) << statistics.map_bytes << " bytes" << endl;
+    cout << "Header:                    " << internal << setw(5) << statistics.header_bytes << " bytes" << endl;
+    cout << "Names in map:              " << internal << setw(5) << statistics.name_bytes << " bytes" << endl;
     cout << "=============================================" << endl;
-    cout << "Total file size:           " << (statistics.used_bytes + statistics.free_bytes + statistics.map_bytes +statistics.header_bytes) << " bytes" << endl << endl;
+    cout << "Total file size:           " << internal << setw(5) << (statistics.used_bytes + statistics.free_bytes + statistics.map_bytes +statistics.header_bytes) << " bytes" << endl << endl;
 }
 
 
