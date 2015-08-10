@@ -15,6 +15,12 @@
 using namespace std;
 
 
+namespace fld
+{
+
+const char* MAP_BLOCK_FILENAME = "";  // File name we give the map block in the map. This is an invalid file name, so should be fine.
+
+
 file_disk::file_disk()
     : mVersion(0x00000101), mMapOffset(0), mMapFlags(0)
 {
@@ -348,7 +354,7 @@ bool    file_disk::compact()
     //  the last block's data.
     for( auto currNodeEntry : mFileMap )
     {
-        if( strcmp(currNodeEntry.second.name().c_str(),MAP_BLOCK_FILENAME) == 0 )    // Skip the map, we'll add a new one.
+        if( currNodeEntry.second.name().compare(MAP_BLOCK_FILENAME) == 0 )    // Skip the map, we'll add a new one.
             continue;
         
         if( currNodeEntry.second.cached_data() != nullptr )
@@ -409,6 +415,40 @@ bool    file_disk::compact()
 }
 
 
+bool   file_disk::statistics( struct stats* outStatistics )
+{
+    memset( outStatistics, 0, sizeof(struct stats) );
+    
+    outStatistics->header_bytes = sizeof(uint32_t) +sizeof(uint64_t);
+    
+    for( auto currNodeEntry : mFileMap )
+    {
+        const file_node& currNode = currNodeEntry.second;
+        if( (currNode.flags() & file_node::is_free) != 0 )
+            cout << "Internal error: free block in used list." << endl;
+        if( currNode.name().compare(MAP_BLOCK_FILENAME) == 0 )
+        {
+            outStatistics->map_bytes = currNode.logical_size();
+        }
+        else
+        {
+            outStatistics->used_bytes += currNode.logical_size();
+            outStatistics->num_files ++;
+        }
+        outStatistics->name_bytes += currNode.name().size();
+        outStatistics->free_bytes += currNode.physical_size() -currNode.logical_size();
+    }
+    for( auto currNode : mFreeBlocks )
+    {
+        if( (currNode.flags() & file_node::is_free) == 0 )
+            cout << "Internal error: used block in free list." << endl;
+        outStatistics->name_bytes += currNode.name().size();
+        outStatistics->free_bytes += currNode.physical_size();
+    }
+    
+    return true;
+}
+
 bool    file_node::read( std::iostream& inFile )
 {
     uint8_t     nameLen = 0;
@@ -443,4 +483,4 @@ bool    file_node::write( std::iostream& inFile ) const
 }
 
 
-
+} /* namespace file_disk */

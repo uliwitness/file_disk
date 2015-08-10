@@ -16,7 +16,10 @@
 #include <vector>
 
 
-#define MAP_BLOCK_FILENAME      ""  // File name we give the map block in the map. This is an invalid file name, so should be fine.
+namespace fld
+{
+
+extern const char* MAP_BLOCK_FILENAME;  // File name we give the map block in the map. This is an invalid file name, so should be fine.
 
 
 class file_node
@@ -31,7 +34,7 @@ public:
     };
     typedef uint32_t   node_flags_t;
     
-    file_node() : mFlags(is_free), mStartOffs(0), mLogicalSize(0), mPhysicalSize(0), mCachedData(nullptr) {}
+    file_node() : mFlags(0), mStartOffs(0), mLogicalSize(0), mPhysicalSize(0), mCachedData(nullptr) {}
     file_node( const file_node& inOriginal ) : mFlags(inOriginal.mFlags), mStartOffs(inOriginal.mStartOffs), mLogicalSize(inOriginal.mLogicalSize), mPhysicalSize(inOriginal.mPhysicalSize), mCachedData(nullptr), mName(inOriginal.mName) { if( inOriginal.mCachedData != nullptr ) { mCachedData = new char[inOriginal.mLogicalSize]; memcpy(mCachedData, inOriginal.mCachedData, inOriginal.mLogicalSize); } }
 //    file_node( file_node&& inOriginal ) : mFlags(inOriginal.mFlags), mStartOffs(inOriginal.mStartOffs), mLogicalSize(inOriginal.mLogicalSize), mPhysicalSize(inOriginal.mPhysicalSize), mCachedData(inOriginal.mCachedData), mName(inOriginal.mName) { inOriginal.mCachedData = nullptr; }
     ~file_node()    { if( mCachedData ) delete [] mCachedData; }
@@ -64,6 +67,16 @@ protected:
 };
 
 
+struct stats
+{
+    uint64_t    used_bytes;     // How many bytes in file actually used for data.
+    uint64_t    free_bytes;     // How many bytes in file unused & available for re-use.
+    uint64_t    map_bytes;      // How many bytes in file used for map.
+    uint64_t    header_bytes; // How many bytes in file used for version, map offset.
+    uint64_t    name_bytes;     // How many bytes in file map used for names (excl. length bytes).
+    uint64_t    num_files;      // How many files inside this file_disk.
+};
+
 class file_disk
 {
 public:
@@ -91,6 +104,8 @@ public:
     bool            add_file( const char* inFileName, char* inData, size_t dataSize, size_t blockSize = 0 );
 
     bool            delete_file( const char* inFileName );
+    
+    bool            statistics( struct stats* outStatistics );
 
 protected:
     bool            load_map();
@@ -107,5 +122,7 @@ protected:
     uint32_t                        mVersion;   // Only low 2 bytes used for major/minor file format version. Other 2 bytes used to detect endian-ness (If high byte is not 0, you're reading an (currently unsupported) non-native endian file).
     uint64_t                        mMapOffset; // Position of the block that contains the block map.
 };
+
+} /* namespace file_disk*/
 
 #endif /* defined(__FileDisk__file_disk__) */
