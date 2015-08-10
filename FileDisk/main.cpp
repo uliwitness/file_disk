@@ -56,7 +56,6 @@ int main(int argc, const char * argv[])
         cout << "Could not compact the file_disk." << endl;
     
     theFile.statistics( &statistics );
-    
     print_statistics( statistics );
     
     return 0;

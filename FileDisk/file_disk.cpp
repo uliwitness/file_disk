@@ -411,6 +411,9 @@ bool    file_disk::compact()
     compactedFile.close();
     rename( compactedPath.c_str(), mFilePath.c_str() );
     
+    mFileMap.clear();
+    mFreeBlocks.clear();
+    
     return open( mFilePath );
 }
 
