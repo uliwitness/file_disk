@@ -44,8 +44,22 @@ int main(int argc, const char * argv[])
     
     if( !theFile.write() )
         cout << "Could not save this file_disk." << endl;
-
+    
     struct stats   statistics;
+    theFile.statistics( &statistics );
+    print_statistics( statistics );
+
+    const char* theStr2 = "Compacted.";
+    size_t      dataLen2 = strlen(theStr2);
+    char*       blockData2 = new char[dataLen2];
+    memmove( blockData2, theStr2, dataLen2 );
+    
+    if( !theFile.set_file_contents( "hello_world.txt", blockData2, dataLen2) )
+        cout << "Could change block text." << endl;
+
+    if( !theFile.write() )
+        cout << "Could not save this file_disk." << endl;
+
     theFile.statistics( &statistics );
     print_statistics( statistics );
     

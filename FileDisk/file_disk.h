@@ -102,6 +102,7 @@ public:
     //  made dataSize bytes large (which is the mLogicalSize). Takes over ownership of the malloc()ed block
     //  inData. You may specify NULL for inData if dataSize == 0 and blockSize > 0.
     bool            add_file( const char* inFileName, char* inData, size_t dataSize, size_t blockSize = 0 );
+    bool            set_file_contents( const char* inFileName, char* inData, size_t dataSize );
 
     bool            delete_file( const char* inFileName );
     

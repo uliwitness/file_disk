@@ -289,6 +289,31 @@ bool    file_disk::add_file( const char* inFileName, char* inData, size_t dataSi
 }
 
 
+bool    file_disk::set_file_contents( const char* inFileName, char* inData, size_t dataSize )
+{
+    if( inFileName[0] == 0 )
+        return false; // Can't delete the file map.
+    
+    auto fileItty = mFileMap.find(inFileName);
+    if( fileItty == mFileMap.end() )
+        return false;
+    
+    if( dataSize > fileItty->second.physical_size() )
+    {
+        swap_node_for_free_node_of_size( fileItty->second, dataSize );
+    }
+    
+    if( fileItty->second.cached_data() )
+        delete [] fileItty->second.cached_data();
+    fileItty->second.set_cached_data( inData );
+    fileItty->second.set_logical_size( dataSize );
+    fileItty->second.set_flags( fileItty->second.flags() | file_node::data_dirty | file_node::offsets_dirty );
+    mMapFlags |= data_dirty;
+    
+    return true;
+}
+
+
 bool    file_disk::delete_file( const char* inFileName )
 {
     if( inFileName[0] == 0 )
