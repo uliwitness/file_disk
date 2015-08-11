@@ -9,6 +9,8 @@
 #include <iostream>
 #include "file_disk.h"
 #include <iomanip>
+#include "index_set.h"
+#include <sstream>
 
 
 using namespace std;
@@ -28,8 +30,64 @@ void    print_statistics( const struct stats& statistics )
 }
 
 
+void    test_indexes()
+{
+    stringstream            dumped;
+    index_set<uint64_t>     indexes;
+    indexes.append( 1 );
+    if( indexes.has(0) != index_set<uint64_t>::does_not_exist )
+        cout << "error: Adding 1 added 0!" << std::endl;
+    if( indexes.has(1) != index_set<uint64_t>::fully_exists )
+        cout << "error: Adding 1 failed!" << std::endl;
+    if( indexes.has(1,2) != index_set<uint64_t>::partially_exists )
+        cout << "error: Adding 1 added 2 or didn't add 1!" << std::endl;
+    if( indexes.has(2) != index_set<uint64_t>::does_not_exist )
+        cout << "error: Adding 1 added 2!" << std::endl;
+    indexes.append( 2 );
+    if( indexes.has(1) != index_set<uint64_t>::fully_exists )
+        cout << "error: Adding 2 destroyed 1!" << std::endl;
+    if( indexes.has(2) != index_set<uint64_t>::fully_exists )
+        cout << "error: Adding 2 failed!" << std::endl;
+    if( indexes.has(1,2) != index_set<uint64_t>::fully_exists )
+        cout << "error: Adding 1 and 2 somehow went wrong!" << std::endl;
+    indexes.append( 3 );
+    if( indexes.has(1) != index_set<uint64_t>::fully_exists )
+        cout << "error: Adding 3 destroyed 1!" << std::endl;
+    if( indexes.has(2) != index_set<uint64_t>::fully_exists )
+        cout << "error: Adding 3 destroyed 2!" << std::endl;
+    if( indexes.has(3) != index_set<uint64_t>::fully_exists )
+        cout << "error: Adding 2 failed!" << std::endl;
+    if( indexes.has(1,3) != index_set<uint64_t>::fully_exists )
+        cout << "error: Adding 1 through 3 somehow went wrong!" << std::endl;
+    indexes.print( dumped );
+    if( dumped.str().compare( "1 ranges:\n{ 1, 3 }\n" ) != 0 )
+        cout << "error: Sequential adding test failed!" << std::endl;
+
+    stringstream            dumped2;
+    index_set<uint64_t>     indexes2;
+    indexes2.append( 1 );
+    indexes2.append( 3 );
+    indexes2.append( 2 );
+    indexes2.print( dumped2 );
+    if( dumped2.str().compare( "1 ranges:\n{ 1, 3 }\n" ) != 0 )
+        cout << "error: Out-of-order adding test failed!" << endl << dumped2.str() << endl;
+
+    stringstream            dumped3;
+    index_set<uint64_t>     indexes3;
+    indexes3.append( 1 );
+    indexes3.append( 3 );
+    indexes3.append( 5 );
+    indexes3.append( 7 );
+    indexes3.print( dumped3 );
+    if( dumped3.str().compare( "4 ranges:\n{ 1, 1 }\n{ 3, 3 }\n{ 5, 5 }\n{ 7, 7 }\n" ) != 0 )
+        cout << "error: Gappy adding test failed!" << endl << dumped3.str() << endl;
+}
+
+
 int main(int argc, const char * argv[])
 {
+    test_indexes();
+    
     file_disk   theFile;
     if( !theFile.open("testfile.boff") )
         cout << "Couldn't create a new disk_file of name 'hello_world.txt'." << endl;
