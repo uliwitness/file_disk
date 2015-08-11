@@ -22,6 +22,38 @@ namespace fld
 const char* MAP_BLOCK_FILENAME = "";  // File name we give the map block in the map. This is an invalid file name, so should be fine.
 
 
+//class block_streambuf : public streambuf
+//{
+//public:
+//    block_streambuf( file_disk& inFileDisk, file_node& inFileNode )
+//      : mFileDisk(inFileDisk), mFileNode(inFileNode)
+//    {
+//    }
+//
+//protected:
+//    virtual int overflow(int c)
+//    {
+//        char    ch = c;
+//        mFileDisk.write_to_node( (char*)&ch, sizeof(ch), mFileNode );
+//        return c;
+//    }
+//
+//    virtual int underflow()
+//    {
+//        int result = EOF;
+//        if( mFileDisk.read( &mByte, sizeof(mByte), mFileNode ) )
+//            result = mByte;
+//        setg( &mByte, &mByte, &mByte+1 );
+//        return mByte;
+//    }
+//
+//protected:
+//    file_node&  mFileNode;
+//    file_disk&  mFileDisk;
+//    char        mByte;
+//};
+
+
 file_disk::file_disk()
     : mVersion(0x00000101), mMapOffset(0), mMapFlags(0)
 {
@@ -104,7 +136,7 @@ void    file_disk::swap_node_for_free_node_of_size( file_node& ioNode, size_t de
             ioNode.set_cached_data( currNode.cached_data() );
             currNode.set_flags(file_node::is_free);
             currNode.set_cached_data( nullptr );
-            mMapFlags |= map_needs_rewrite;
+            mMapFlags |= offsets_dirty;
             return;
         }
     }
@@ -217,7 +249,9 @@ bool    file_disk::write()
         file_node&  mapEntry = dummy;
         auto mapEntryItty = mFileMap.find(MAP_BLOCK_FILENAME);  // Have a map?
         if( mapEntryItty == mFileMap.end() )
+        {
             mapEntry = node_of_size_for_name( mapSize, MAP_BLOCK_FILENAME, mapSize +mapEntry.node_size_on_disk() );
+        }
         else
         {
             mapEntry = mapEntryItty->second;
@@ -310,6 +344,35 @@ bool    file_disk::set_file_contents( const char* inFileName, char* inData, size
     fileItty->second.set_logical_size( dataSize );
     fileItty->second.set_flags( fileItty->second.flags() | file_node::data_dirty | file_node::offsets_dirty );
     mMapFlags |= data_dirty;
+    
+    return true;
+}
+
+
+bool    file_disk::write( const char* buf, size_t numBytes, file_node& inFileNode )
+{
+    size_t dataSize = inFileNode.physical_size() + numBytes;
+    if( dataSize > inFileNode.physical_size() )
+    {
+        swap_node_for_free_node_of_size( inFileNode, dataSize );
+    }
+    
+    if( inFileNode.cached_data() )
+        delete [] inFileNode.cached_data();
+    inFileNode.set_cached_data( nullptr );
+    inFileNode.set_logical_size( dataSize );
+    inFileNode.set_flags( inFileNode.flags() | file_node::data_dirty | file_node::offsets_dirty );
+    mMapFlags |= data_dirty;
+    
+    exit(1);    // +++ finish implementation, doesn't move data yet.
+    
+    return true;
+}
+
+
+bool    file_disk::read( char* buf, size_t numBytes, file_node& inFileNode )
+{
+    exit(1);    // +++ finish implementation.
     
     return true;
 }

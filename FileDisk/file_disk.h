@@ -113,7 +113,11 @@ protected:
     bool            load_map();
     void            swap_node_for_free_node_of_size( file_node& ioNode, size_t desiredSize, size_t desiredSizeIfNotRecycled = 0 );
     file_node&      node_of_size_for_name( size_t desiredSize, const std::string& inName, size_t desiredSizeIfNotRecycled = 0 );
+    bool            write( const char* buf, size_t numBytes, file_node& inFileNode );
+    bool            read( char* buf, size_t numBytes, file_node& inFileNode );
 
+    friend class block_streambuf;
+    
 protected:
     size_t                          mFileSize;  // Size in bytes of the file/position at which we append new blocks.
     std::map<std::string,file_node> mFileMap;   // List of used blocks in the file, indexed by name.
