@@ -106,6 +106,9 @@ int main(int argc, const char * argv[])
     struct stats   statistics;
     theFile.statistics( &statistics );
     print_statistics( statistics );
+    
+    if( !theFile.is_valid() )
+        cout << "*** ERROR FILE IS NO LONGER VALID ***" << endl;
 
     const char* theStr2 = "Compacted.";
     size_t      dataLen2 = strlen(theStr2);
@@ -121,6 +124,9 @@ int main(int argc, const char * argv[])
     theFile.statistics( &statistics );
     print_statistics( statistics );
     
+    if( !theFile.is_valid() )
+        cout << "*** ERROR FILE IS NO LONGER VALID ***" << endl;
+    
     if( !theFile.delete_file( "hello_world.txt" ) )
         cout << "File of name 'hello_world.txt' doesn't exist on this file_disk." << endl;
     
@@ -129,6 +135,9 @@ int main(int argc, const char * argv[])
     
     theFile.statistics( &statistics );
     print_statistics( statistics );
+    
+    if( !theFile.is_valid() )
+        cout << "*** ERROR FILE IS NO LONGER VALID ***" << endl;
     
     return 0;
 }

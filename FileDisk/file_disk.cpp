@@ -7,6 +7,7 @@
 //
 
 #include "file_disk.h"
+#include "index_set.h"
 #include <iostream>
 #include <sys/stat.h>
 #include <sstream>
@@ -309,6 +310,45 @@ bool    file_disk::set_file_contents( const char* inFileName, char* inData, size
     fileItty->second.set_logical_size( dataSize );
     fileItty->second.set_flags( fileItty->second.flags() | file_node::data_dirty | file_node::offsets_dirty );
     mMapFlags |= data_dirty;
+    
+    return true;
+}
+
+
+bool    file_disk::is_valid()
+{
+    bool                    foundMapBlock = false;
+    index_set<uint64_t>     occupiedByteRanges;
+    for( auto currNodeEntry : mFileMap )
+    {
+        const file_node& currNode = currNodeEntry.second;
+        
+        if( currNode.physical_size() < 1 )
+            return false;
+        if( currNode.physical_size() < currNode.logical_size() )
+            return false;
+        if( (currNode.start_offset() +currNode.physical_size()) > mFileSize )
+            return false;
+        if( currNode.start_offset() == mMapOffset )
+            foundMapBlock = true;
+        
+        if( occupiedByteRanges.append( currNode.start_offset() +1, currNode.start_offset() + currNode.physical_size() ) != index_set<uint64_t>::does_not_exist )
+            return false;   // Some blocks overlap :-o
+    }
+    
+    if( !foundMapBlock )
+        return false;
+    
+    for( auto currNode : mFreeBlocks )
+    {
+        if( currNode.physical_size() < currNode.logical_size() )
+            return false;
+        if( (currNode.start_offset() +currNode.physical_size()) > mFileSize )
+            return false;
+        
+        if( occupiedByteRanges.append( currNode.start_offset() +1, currNode.start_offset() + currNode.physical_size() ) != index_set<uint64_t>::does_not_exist )
+            return false;   // Some blocks overlap :-o
+    }
     
     return true;
 }
