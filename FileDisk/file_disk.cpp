@@ -154,7 +154,7 @@ void    file_disk::swap_node_for_free_node_of_size( file_node& ioNode, size_t de
     ioNode.set_physical_size( desiredSizeIfNotRecycled );
     ioNode.set_logical_size( desiredSizeIfNotRecycled );
     ioNode.set_flags( ioNode.flags() | file_node::offsets_dirty );
-    mFileSize += desiredSize;
+    mFileSize += desiredSizeIfNotRecycled;
 }
 
 
