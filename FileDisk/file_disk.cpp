@@ -218,9 +218,9 @@ bool    file_disk::write()
     //  much less likely to fail, while growing so large the disk is full is quite common,
     //  so we'd only do some needless writing of free blocks, but keep a valid file.
     
-    for( auto currNodeEntry : mFileMap )
+    for( std::map<std::string,file_node>::iterator currNodeEntry = mFileMap.begin(); currNodeEntry != mFileMap.end(); currNodeEntry++ )
     {
-        file_node& currNode = currNodeEntry.second;
+        file_node& currNode = currNodeEntry->second;
         mapSize += currNode.node_size_on_disk();
         
         if( (currNode.flags() & data_dirty) && currNode.name().size() != 0 )
@@ -238,7 +238,7 @@ bool    file_disk::write()
                 uint8_t nullByte = 0;
                 mFile.write( (char*)&nullByte, sizeof(nullByte) );
             }
-            currNode.set_flags( currNode.flags() & ~data_dirty );
+            currNodeEntry->second.set_flags( currNode.flags() & ~file_node::data_dirty );
         }
     }
     
@@ -247,15 +247,15 @@ bool    file_disk::write()
         file_node   dummy;
         dummy.set_name(MAP_BLOCK_FILENAME);
         file_node&  mapEntry = dummy;
-        auto mapEntryItty = mFileMap.find(MAP_BLOCK_FILENAME);  // Have a map?
+        std::map<std::string,file_node>::iterator mapEntryItty = mFileMap.find(MAP_BLOCK_FILENAME);  // Have a map?
         if( mapEntryItty == mFileMap.end() )
         {
             mapEntry = node_of_size_for_name( mapSize, MAP_BLOCK_FILENAME, mapSize +mapEntry.node_size_on_disk() );
         }
         else
         {
+            swap_node_for_free_node_of_size( mapEntryItty->second, mapSize, mapSize +mapEntry.node_size_on_disk() );
             mapEntry = mapEntryItty->second;
-            swap_node_for_free_node_of_size( mapEntry, mapSize, mapSize +mapEntry.node_size_on_disk() );
         }
         
         mMapOffset = mapEntry.start_offset();
@@ -278,9 +278,10 @@ bool    file_disk::write()
     //  point where things can fail is only when we write the new
     //  map offset in, which is highly unlikely.
     mFile.seekp( mMapOffset +sizeof(uint64_t), ios::beg );
-    for( auto currNodeEntry : mFileMap )
+    for( std::map<std::string,file_node>::iterator currNodeEntry = mFileMap.begin(); currNodeEntry != mFileMap.end(); currNodeEntry++ )
     {
-        const file_node& currNode = currNodeEntry.second;
+        file_node& currNode = currNodeEntry->second;
+        currNode.set_flags( currNode.flags() & ~(file_node::offsets_dirty | file_node::name_dirty) );
         currNode.write( mFile );
     }
     for( auto currNode : mFreeBlocks )
@@ -316,7 +317,7 @@ bool    file_disk::add_file( const char* inFileName, char* inData, size_t dataSi
     if( inData )
     {
         newNode.set_cached_data( inData );
-        newNode.set_flags( newNode.flags() | data_dirty );
+        newNode.set_flags( newNode.flags() | file_node::data_dirty );
         mMapFlags |= data_dirty;
     }
     
@@ -579,6 +580,42 @@ bool   file_disk::statistics( struct stats* outStatistics )
     
     return true;
 }
+
+
+void    file_disk::print( std::ostream& output )
+{
+    output << "      Path: " << mFilePath << endl;
+    output << " File size: " << mFileSize << endl;
+    output << "Map Offset: " << mMapOffset << endl;
+    output << " Map Flags: " << mMapFlags << endl;
+    output << "   Version: " << hex << ((mVersion & 0xff00) >> 8) << "." << (mVersion & 0xff) << dec << endl;
+    int x = 0;
+    for( auto currNodeEntry : mFileMap )
+    {
+        const file_node& currNode = currNodeEntry.second;
+        if( currNode.name().compare(MAP_BLOCK_FILENAME) == 0 )
+            output << "[" << x << "] MAP" << endl;
+        else
+            output << "[" << x << "] \"" << currNode.name() << "\":" << endl;
+        output << "\t Start Offset: " << currNode.start_offset() << endl;
+        output << "\t Logical Size: " << currNode.logical_size() << endl;
+        output << "\tPhysical Size: " << currNode.physical_size() << endl;
+        output << "\t        Flags: " << ((currNode.flags() & file_node::data_dirty) ? "[data dirty] " : "") << ((currNode.flags() & file_node::offsets_dirty) ? "[offsets dirty] " : "") << ((currNode.flags() & file_node::name_dirty) ? "[name dirty] " : "") << ((currNode.flags() & file_node::is_free) ? "[free] " : "") << endl;
+        
+        x++;
+    }
+    for( auto currNode : mFreeBlocks )
+    {
+        output << "[" << x << "] <unnamed>" << endl;
+        output << "\t Start Offset: " << currNode.start_offset() << endl;
+        output << "\t Logical Size: " << currNode.logical_size() << endl;
+        output << "\tPhysical Size: " << currNode.physical_size() << endl;
+        output << "\t        Flags: " << ((currNode.flags() & file_node::data_dirty) ? "[data dirty] " : "") << ((currNode.flags() & file_node::offsets_dirty) ? "[offsets dirty] " : "") << ((currNode.flags() & file_node::name_dirty) ? "[name dirty] " : "") << ((currNode.flags() & file_node::is_free) ? "[free] " : "") << endl;
+        x++;
+    }
+    output << endl;
+}
+
 
 bool    file_node::read( std::iostream& inFile )
 {

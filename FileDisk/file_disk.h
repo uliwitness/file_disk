@@ -108,6 +108,7 @@ public:
     
     bool            statistics( struct stats* outStatistics );
     bool            is_valid(); // Only works if the file hasn't been modified since the last write/compact or has been freshly loaded and is non-empty.
+    void            print( std::ostream& output );
 
 protected:
     bool            load_map();
