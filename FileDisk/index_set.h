@@ -83,7 +83,6 @@ enum index_set<Integer>::existence    index_set<Integer>::append( Integer lowest
         else if( currRangeItty->start <= lowest && currRangeItty->end <= highest
                 && lowest <= currRangeItty->end )   // We overlap at our start with the current range?
         {
-            currRangeItty->end = highest;
             auto prevRangeItty = currRangeItty;
             currRangeItty->end = highest;   // Just extend the range.
             ++currRangeItty;
@@ -103,6 +102,23 @@ enum index_set<Integer>::existence    index_set<Integer>::append( Integer lowest
         {
             currRangeItty->start = lowest;
             return partially_exists;
+        }
+        else if( lowest < currRangeItty->start && highest > currRangeItty->end )   // This is a subset in the middle of our range.
+        {
+            currRangeItty->start = lowest;
+            currRangeItty->end = highest;
+            auto prevRangeItty = currRangeItty;
+            ++currRangeItty;
+            
+            while( currRangeItty != mIntegers.end() && currRangeItty->start <= (highest+1) )   // We just closed the gap to the next one?
+            {
+                if( currRangeItty->end > prevRangeItty->end )
+                {
+                    prevRangeItty->end = currRangeItty->end;    // Merge the next one into this range.
+                }
+                currRangeItty = mIntegers.erase(currRangeItty);  // And delete the next one.
+            }
+            return partially_exists;   // The values only abut, we didn't have any overlap, so this is not a partial add.
         }
     }
     

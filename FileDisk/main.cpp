@@ -90,6 +90,15 @@ void    test_indexes()
     indexes4.print( dumped4 );
     if( dumped4.str().compare( "1 ranges:\n{ 1, 3 }\n" ) != 0 )
         cout << "error: Doubly overlapping ranges failed!" << endl << dumped4.str() << endl;
+
+    stringstream            dumped5;
+    index_set<uint64_t>     indexes5;
+    indexes5.append( 2 );
+    indexes5.append( 4 );
+    indexes5.append( 1, 4 );
+    indexes5.print( dumped5 );
+    if( dumped5.str().compare( "1 ranges:\n{ 1, 4 }\n" ) != 0 )
+        cout << "error: Doubly overlapping ranges failed!" << endl << dumped5.str() << endl;
 }
 
 
