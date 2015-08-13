@@ -59,12 +59,21 @@ enum index_set<Integer>::existence    index_set<Integer>::append( Integer lowest
             auto prevRangeItty = currRangeItty;
             currRangeItty->end = highest;   // Just extend the range.
             ++currRangeItty;
-            if( currRangeItty != mIntegers.end() && currRangeItty->start == (highest+1) )   // We just closed the gap to the next one?
+            enum existence result = does_not_exist;
+            
+            while( currRangeItty != mIntegers.end() && currRangeItty->start <= (highest+1) )   // We just closed the gap to the next one?
             {
-                prevRangeItty->end = currRangeItty->end;    // Merge the next one into this range.
-                mIntegers.erase(currRangeItty);  // And delete the next one.
+                if( currRangeItty->end > prevRangeItty->end )
+                {
+                    prevRangeItty->end = currRangeItty->end;    // Merge the next one into this range.
+                    if( currRangeItty->start <= highest )
+                        result = partially_exists;
+                }
+                else if( currRangeItty->start <= highest )
+                    result = fully_exists;
+                currRangeItty = mIntegers.erase(currRangeItty);  // And delete the next one.
             }
-            return does_not_exist;   // The values only abut, we didn't have any overlap, so this is not a partial add.
+            return result;   // The values only abut, we didn't have any overlap, so this is not a partial add.
         }
         else if( currRangeItty->start == (highest +1) )    // Immediately precedes this one?
         {
@@ -75,7 +84,19 @@ enum index_set<Integer>::existence    index_set<Integer>::append( Integer lowest
                 && lowest <= currRangeItty->end )   // We overlap at our start with the current range?
         {
             currRangeItty->end = highest;
-            return partially_exists;
+            auto prevRangeItty = currRangeItty;
+            currRangeItty->end = highest;   // Just extend the range.
+            ++currRangeItty;
+            
+            while( currRangeItty != mIntegers.end() && currRangeItty->start <= (highest+1) )   // We just closed the gap to the next one?
+            {
+                if( currRangeItty->end > prevRangeItty->end )
+                {
+                    prevRangeItty->end = currRangeItty->end;    // Merge the next one into this range.
+                }
+                currRangeItty = mIntegers.erase(currRangeItty);  // And delete the next one.
+            }
+            return partially_exists;   // The values only abut, we didn't have any overlap, so this is not a partial add.
         }
         else if( currRangeItty->start >= lowest && currRangeItty->end >= highest
                 && highest >= currRangeItty->start)   // We only overlap at our end with the current range?

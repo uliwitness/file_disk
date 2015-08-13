@@ -81,6 +81,15 @@ void    test_indexes()
     indexes3.print( dumped3 );
     if( dumped3.str().compare( "4 ranges:\n{ 1, 1 }\n{ 3, 3 }\n{ 5, 5 }\n{ 7, 7 }\n" ) != 0 )
         cout << "error: Gappy adding test failed!" << endl << dumped3.str() << endl;
+
+    stringstream            dumped4;
+    index_set<uint64_t>     indexes4;
+    indexes4.append( 1 );
+    indexes4.append( 3 );
+    indexes4.append( 1, 3 );
+    indexes4.print( dumped4 );
+    if( dumped4.str().compare( "1 ranges:\n{ 1, 3 }\n" ) != 0 )
+        cout << "error: Doubly overlapping ranges failed!" << endl << dumped4.str() << endl;
 }
 
 
