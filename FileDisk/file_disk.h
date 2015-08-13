@@ -34,8 +34,8 @@ public:
     };
     typedef uint32_t   node_flags_t;
     
-    file_node() : mFlags(0), mStartOffs(0), mLogicalSize(0), mPhysicalSize(0), mCachedData(nullptr) {}
-    file_node( const file_node& inOriginal ) : mFlags(inOriginal.mFlags), mStartOffs(inOriginal.mStartOffs), mLogicalSize(inOriginal.mLogicalSize), mPhysicalSize(inOriginal.mPhysicalSize), mCachedData(nullptr), mName(inOriginal.mName) { if( inOriginal.mCachedData != nullptr ) { mCachedData = new char[inOriginal.mLogicalSize]; memcpy(mCachedData, inOriginal.mCachedData, inOriginal.mLogicalSize); } }
+    file_node() : mFlags(0), mStartOffs(0), mLogicalSize(0), mPhysicalSize(0), mCachedData(nullptr), mReadOffs(0), mWriteOffs(0) {}
+    file_node( const file_node& inOriginal ) : mFlags(inOriginal.mFlags), mStartOffs(inOriginal.mStartOffs), mLogicalSize(inOriginal.mLogicalSize), mPhysicalSize(inOriginal.mPhysicalSize), mCachedData(nullptr), mName(inOriginal.mName), mReadOffs(0), mWriteOffs(0) { if( inOriginal.mCachedData != nullptr ) { mCachedData = new char[inOriginal.mLogicalSize]; memcpy(mCachedData, inOriginal.mCachedData, inOriginal.mLogicalSize); } }
 //    file_node( file_node&& inOriginal ) : mFlags(inOriginal.mFlags), mStartOffs(inOriginal.mStartOffs), mLogicalSize(inOriginal.mLogicalSize), mPhysicalSize(inOriginal.mPhysicalSize), mCachedData(inOriginal.mCachedData), mName(inOriginal.mName) { inOriginal.mCachedData = nullptr; }
     ~file_node()    { if( mCachedData ) delete [] mCachedData; }
     
@@ -56,6 +56,10 @@ public:
     const char*     cached_data() const                     { return mCachedData; }
     char*           cached_data()                           { return mCachedData; }
     void            set_cached_data( char* inData )         { mCachedData = inData; }   // Node takes ownership of data passed in, but caller must free previous data in mCachedData.
+    void            set_read_offs( size_t inOffs )          { mReadOffs = inOffs; }
+    size_t          read_offs()                             { return mReadOffs; }
+    void            set_write_offs( size_t inOffs )         { mWriteOffs = inOffs; }
+    size_t          write_offs()                            { return mWriteOffs; }
     
 protected:
     std::string     mName;          // Name of the block (i.e. file-in-file). Max. 255 bytes.
@@ -64,6 +68,8 @@ protected:
     uint64_t        mPhysicalSize;  // Number of bytes the block occupies on disk.
     node_flags_t    mFlags;         // Flags to save to file.
     char*           mCachedData;    // Cached data, an array of chars allocated using new.
+    uint64_t        mReadOffs;
+    uint64_t        mWriteOffs;
 };
 
 
@@ -109,6 +115,8 @@ public:
     bool            statistics( struct stats* outStatistics );
     bool            is_valid(); // Only works if the file hasn't been modified since the last write/compact or has been freshly loaded and is non-empty.
     void            print( std::ostream& output );
+    
+    
 
 protected:
     bool            load_map();

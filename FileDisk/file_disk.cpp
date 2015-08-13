@@ -352,20 +352,39 @@ bool    file_disk::set_file_contents( const char* inFileName, char* inData, size
 
 bool    file_disk::write( const char* buf, size_t numBytes, file_node& inFileNode )
 {
-    size_t dataSize = inFileNode.physical_size() + numBytes;
+    size_t  oldSize = inFileNode.logical_size();
+    size_t  dataSize = inFileNode.write_offs()+ numBytes;
     if( dataSize > inFileNode.physical_size() )
     {
         swap_node_for_free_node_of_size( inFileNode, dataSize );
     }
     
+    if( inFileNode.flags() & file_node::data_dirty )
+    {
+        mFile.seekp( inFileNode.start_offset(), ios::beg );
+        if( mFile.fail() || mFile.bad() )
+            return false;   // This block is invalid now. Un-swap the blocks to fix it?
+        mFile.write( (char*) inFileNode.cached_data(), oldSize );
+        if( mFile.fail() || mFile.bad() )
+            return false;   // This block is invalid now. Un-swap the blocks to fix it?
+        inFileNode.set_logical_size( oldSize );
+    }
+
     if( inFileNode.cached_data() )
         delete [] inFileNode.cached_data();
     inFileNode.set_cached_data( nullptr );
+
     inFileNode.set_logical_size( dataSize );
     inFileNode.set_flags( inFileNode.flags() | file_node::data_dirty | file_node::offsets_dirty );
-    mMapFlags |= data_dirty;
+    mMapFlags |= offsets_dirty;
     
-    exit(1);    // +++ finish implementation, doesn't move data yet.
+    mFile.seekp( inFileNode.start_offset() +inFileNode.write_offs(), ios::beg );
+    if( mFile.fail() || mFile.bad() )
+        return false;
+    mFile.write( (char*) buf, numBytes );
+    if( mFile.fail() || mFile.bad() )
+        return false;
+    inFileNode.set_write_offs( inFileNode.write_offs() +numBytes );
     
     return true;
 }
@@ -373,7 +392,25 @@ bool    file_disk::write( const char* buf, size_t numBytes, file_node& inFileNod
 
 bool    file_disk::read( char* buf, size_t numBytes, file_node& inFileNode )
 {
-    exit(1);    // +++ finish implementation.
+    if( inFileNode.read_offs() >= inFileNode.logical_size() )
+        return false;
+    if( (inFileNode.read_offs() + numBytes) >= inFileNode.logical_size() )
+        return false;
+
+    if( inFileNode.cached_data() )
+    {
+        memcpy( buf, inFileNode.cached_data() +inFileNode.read_offs(), numBytes );
+    }
+    else
+    {
+        mFile.seekg( inFileNode.start_offset() +inFileNode.read_offs(), ios::beg );
+        if( mFile.fail() || mFile.bad() )
+            return false;
+        mFile.read( buf, numBytes );
+        if( mFile.fail() || mFile.bad() )
+            return false;
+    }
+    inFileNode.set_read_offs( inFileNode.read_offs() +numBytes );
     
     return true;
 }
